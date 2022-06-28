@@ -74,6 +74,7 @@ async def recalculate_score(beatmap: Beatmap, score: Score) -> None:
                 f"DELETE FROM {score.mode.scores_table} WHERE id = :id",
                 {"id": score.id},
             )
+            return
 
         usecases.performance.calculate_score(score, osu_file_path)
         await services.database.execute(
