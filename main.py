@@ -33,7 +33,7 @@ async def get_scores() -> list[Score]:
 
     for table in ("scores", "scores_relax", "scores_ap"):
         _db_scores = await services.database.fetch_all(
-            f"SELECT * FROM {table} WHERE completed > 1",  # get all non-failed scores
+            f"SELECT * FROM {table} WHERE completed > 1 ORDER BY beatmap_md5",  # get all non-failed scores
         )
 
         db_scores.extend(Score.from_dict(db_score) for db_score in _db_scores)
