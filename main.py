@@ -15,7 +15,7 @@ from objects.path import Path
 
 # returns a dict of {map: [score, score, ...]}
 async def sort_scores(scores: list[Score]) -> dict[Beatmap, list[Score]]:
-    result: dict[Beatmap, list[Score]] = defaultdict(list)
+    result: defaultdict[Beatmap, list[Score]] = defaultdict(list)
 
     for score in scores:
         beatmap = await usecases.beatmap.fetch_by_md5(score.map_md5)
@@ -75,8 +75,8 @@ async def main() -> int:
 
         await asyncio.gather(
             *[
-                recalculate_score(beatmap, scores)
-                for beatmap, scores in sorted_scores.items()
+                recalculate_map(beatmap, _scores)
+                for beatmap, _scores in sorted_scores.items()
             ],
             return_exceptions=True,
         )
