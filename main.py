@@ -13,34 +13,6 @@ from models.beatmap import Beatmap
 from models.score import Score
 from objects.path import Path
 
-# dict of {map: [score, score, ...]}
-BEATMAP_SCORES: dict[Beatmap, list[Score]] = {}
-
-
-async def sort_scores(scores: list[Score]) -> None:
-    global BEATMAP_SCORES
-
-    # stupid temp shit for memory efficiency
-    _scores: defaultdict[str, list[Score]] = defaultdict(list)
-
-    for score in scores:
-        _scores[score.map_md5].append(score)
-
-    for beatmap_md5 in list(_scores.keys()):
-        score_list = _scores[beatmap_md5]
-
-        beatmap = await usecases.beatmap.fetch_by_md5(beatmap_md5)
-        if not beatmap or not beatmap.has_leaderboard:
-            del _scores[beatmap_md5]
-            continue
-
-        BEATMAP_SCORES[beatmap] = score_list
-        del _scores[beatmap_md5]
-
-    del _scores
-
-    logger.info(f"Filtered scores into {len(BEATMAP_SCORES.keys()):,} beatmaps!")
-
 
 async def get_scores() -> list[Score]:
     db_scores = []
@@ -54,6 +26,39 @@ async def get_scores() -> list[Score]:
 
     logger.info(f"Got {len(db_scores):,} scores!")
     return db_scores
+
+
+async def recalculate_scores(scores: list[Score]) -> None:
+    # stupid temp shit for memory efficiency
+    _scores: defaultdict[str, list[Score]] = defaultdict(list)
+    bmap_count = len(_scores)
+
+    for score in scores:
+        _scores[score.map_md5].append(score)
+
+    for beatmap_md5 in list(_scores.keys()):
+        score_list = _scores[beatmap_md5]
+
+        beatmap = await usecases.beatmap.fetch_by_md5(beatmap_md5)
+        if not beatmap or not beatmap.has_leaderboard:
+            del _scores[beatmap_md5]
+            continue
+
+        del _scores[beatmap_md5]
+        asyncio.create_task(recalculate_map(beatmap, score_list))
+
+    del _scores
+    logger.info(f"Calculated scores for {len(bmap_count):,} beatmaps!")
+
+
+async def recalculate_map(beatmap: Beatmap, scores: list[Score]) -> None:
+    await asyncio.gather(
+        *[recalculate_score(beatmap, score) for score in scores],
+        return_exceptions=True,
+    )
+
+    logger.info(f"Completed calculating {beatmap.song_name}!")
+    del beatmap
 
 
 async def recalculate_score(beatmap: Beatmap, score: Score) -> None:
@@ -79,17 +84,6 @@ async def recalculate_score(beatmap: Beatmap, score: Score) -> None:
         logger.error(traceback.format_exc())
 
 
-async def recalculate_map(beatmap: Beatmap, scores: list[Score]) -> None:
-    await asyncio.gather(
-        *[recalculate_score(beatmap, score) for score in scores],
-        return_exceptions=True,
-    )
-
-    del BEATMAP_SCORES[beatmap]
-    logger.info(f"Completed calculating {beatmap.song_name}!")
-    del beatmap
-
-
 async def main() -> int:
     exit_code = 0
 
@@ -99,17 +93,7 @@ async def main() -> int:
         await services.connect_services()
 
         scores = await get_scores()
-        await sort_scores(scores)
-
-        await asyncio.gather(
-            *[
-                recalculate_map(beatmap, _scores)
-                for beatmap, _scores in BEATMAP_SCORES.items()
-            ],
-            return_exceptions=True,
-        )
-
-        logger.info(f"Finished recalculating scores")
+        await recalculate_scores(scores)
 
         # TODO: recalculate user pp, ranks
     except KeyboardInterrupt:
