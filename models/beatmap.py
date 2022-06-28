@@ -43,7 +43,7 @@ class Beatmap:
     rating: Optional[float] = None
 
     def __hash__(self) -> str:
-        return self.md5
+        return hash(self.md5)
 
     @property
     def gives_pp(self) -> bool:
