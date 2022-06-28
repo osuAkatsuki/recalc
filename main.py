@@ -73,8 +73,13 @@ async def main() -> int:
         scores = await get_scores()
         sorted_scores = await sort_scores(scores)
 
-        for beatmap, scores in sorted_scores.items():
-            asyncio.create_task(recalculate_map(beatmap, scores))
+        await asyncio.gather(
+            *[
+                recalculate_score(beatmap, scores)
+                for beatmap, scores in sorted_scores.items()
+            ],
+            return_exceptions=True,
+        )
 
         logger.info(f"Finished recalculating scores")
 

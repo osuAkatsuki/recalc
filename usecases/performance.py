@@ -3,7 +3,6 @@ from __future__ import annotations
 import hashlib
 import math
 import os
-from typing import Optional
 
 from rosu_pp_py import Calculator
 from rosu_pp_py import ScoreParams

@@ -13,6 +13,7 @@ from models.beatmap import Beatmap
 
 MD5_CACHE: dict[str, Beatmap] = {}
 UPDATED_CACHE: dict[str, Beatmap] = {}
+UNSUB_CACHE: set[str] = set()
 
 
 async def update_beatmap(beatmap: Beatmap) -> Optional[Beatmap]:
@@ -71,6 +72,9 @@ async def update_beatmap(beatmap: Beatmap) -> Optional[Beatmap]:
 
 
 async def fetch_by_md5(md5: str) -> Optional[Beatmap]:
+    if md5 in UNSUB_CACHE:
+        return None
+
     if beatmap := md5_from_cache(md5):
         return beatmap
 
@@ -83,6 +87,8 @@ async def fetch_by_md5(md5: str) -> Optional[Beatmap]:
         MD5_CACHE[md5] = beatmap
 
         return beatmap
+
+    UNSUB_CACHE.add(md5)
 
 
 def md5_from_cache(md5: str) -> Optional[Beatmap]:
