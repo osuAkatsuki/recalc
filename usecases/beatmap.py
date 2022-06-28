@@ -12,11 +12,15 @@ from constants.ranked_status import RankedStatus
 from models.beatmap import Beatmap
 
 MD5_CACHE: dict[str, Beatmap] = {}
+UPDATED_CACHE: dict[str, Beatmap] = {}
 
 
 async def update_beatmap(beatmap: Beatmap) -> Optional[Beatmap]:
     if not beatmap.deserves_update:
         return beatmap
+
+    if updated_beatmap := UPDATED_CACHE.get(beatmap.md5):
+        return updated_beatmap
 
     new_beatmap = await id_from_api(beatmap.id)
     if new_beatmap:
@@ -40,6 +44,8 @@ async def update_beatmap(beatmap: Beatmap) -> Optional[Beatmap]:
             if beatmap.frozen:
                 # if the previous version is status frozen, we should force the old status on the new version
                 new_beatmap.status = beatmap.status
+
+            UPDATED_CACHE[beatmap.md5] = new_beatmap
     else:
         # it's now unsubmitted!
         await services.database.execute(
