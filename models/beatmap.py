@@ -42,7 +42,7 @@ class Beatmap:
     frozen: bool = False
     rating: Optional[float] = None
 
-    def __hash__(self) -> str:
+    def __hash__(self) -> int:
         return hash(self.md5)
 
     @property
