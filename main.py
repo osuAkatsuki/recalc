@@ -63,7 +63,7 @@ async def recalculate_map(beatmap: Beatmap, scores: list[Score]) -> None:
 
 async def recalculate_score(beatmap: Beatmap, score: Score) -> None:
     try:
-        beatmap_path = Path("/home/akatsuki/lets/.data/maps")
+        beatmap_path = Path("/home/akatsuki/data/beatmaps")
         osu_file_path = beatmap_path / f"{beatmap.id}.osu"
         if not await usecases.performance.check_local_file(
             osu_file_path,
