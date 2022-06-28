@@ -26,7 +26,9 @@ async def sort_scores(scores: list[Score]) -> None:
     for score in scores:
         _scores[score.map_md5].append(score)
 
-    for beatmap_md5, score_list in reversed(_scores.items()):
+    for beatmap_md5 in list(_scores.keys()):
+        score_list = _scores[beatmap_md5]
+
         beatmap = await usecases.beatmap.fetch_by_md5(beatmap_md5)
         if not beatmap or not beatmap.has_leaderboard:
             del _scores[beatmap_md5]
