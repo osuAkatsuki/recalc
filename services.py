@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from contextlib import AsyncExitStack
 
+import aiohttp
 import aioredis
 import databases
 
@@ -22,13 +23,19 @@ redis: aioredis.Redis = aioredis.Redis(
     port=settings.REDIS_PORT,
 )
 
+http: aiohttp.ClientSession
+
 exit_stack = AsyncExitStack()
 
 
 async def connect_services() -> None:
+    global http
+    http = aiohttp.ClientSession()
+
     await exit_stack.enter_async_context(database)
     await exit_stack.enter_async_context(redis)
 
 
 async def disconnect_services() -> None:
+    await http.close()
     await exit_stack.aclose()

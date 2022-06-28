@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import time
 from dataclasses import dataclass
 from typing import Optional
 
 from constants.mode import Mode
 from constants.ranked_status import RankedStatus
+
+ONE_DAY = 86_400
 
 
 @dataclass
@@ -42,6 +45,22 @@ class Beatmap:
     @property
     def gives_pp(self) -> bool:
         return self.status in (RankedStatus.RANKED, RankedStatus.APPROVED)
+
+    @property
+    def has_leaderboard(self) -> bool:
+        return self.status >= RankedStatus.RANKED
+
+    @property
+    def deserves_update(self) -> bool:
+        """Checks if there should be an attempt to update a map/check if
+        should be updated. This condition is true if a map is not ranked and a day
+        have passed since it was last checked."""
+
+        return (
+            self.status
+            not in (RankedStatus.RANKED, RankedStatus.APPROVED, RankedStatus.LOVED)
+            and self.last_update < int(time.time()) - ONE_DAY
+        )
 
     @property
     def db_dict(self) -> dict:

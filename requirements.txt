@@ -1,3 +1,8 @@
+aiodns
+aiohttp
 aioredis==2.0.1
 asyncmy
+Brotli
+cchardet
 databases
+rosu-pp-py
