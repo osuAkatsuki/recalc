@@ -13,19 +13,30 @@ from models.beatmap import Beatmap
 from models.score import Score
 from objects.path import Path
 
+BEATMAP_SCORES: dict[Beatmap, list[Score]] = {}
+
 # returns a dict of {map: [score, score, ...]}
 async def sort_scores(scores: list[Score]) -> dict[Beatmap, list[Score]]:
-    result: defaultdict[Beatmap, list[Score]] = defaultdict(list)
+    global BEATMAP_SCORES
+
+    # stupid temp shit for memory efficiency
+    _scores: defaultdict[str, list[Score]] = defaultdict(list)
 
     for score in scores:
-        beatmap = await usecases.beatmap.fetch_by_md5(score.map_md5)
+        _scores[score.map_md5].append(score)
+
+    for beatmap_md5, score_list in reversed(_scores.items()):
+        beatmap = await usecases.beatmap.fetch_by_md5(beatmap_md5)
         if not beatmap or not beatmap.has_leaderboard:
+            del _scores[beatmap_md5]
             continue
 
-        result[beatmap].append(score)
+        BEATMAP_SCORES[beatmap] = score_list
+        del _scores[beatmap_md5]
 
-    logger.info(f"Filtered scores into {len(result.keys()):,} beatmaps!")
-    return dict(result)
+    del _scores
+
+    logger.info(f"Filtered scores into {len(BEATMAP_SCORES.keys()):,} beatmaps!")
 
 
 async def get_scores() -> list[Score]:
@@ -46,6 +57,15 @@ async def recalculate_score(beatmap: Beatmap, score: Score) -> None:
     try:
         beatmap_path = Path("/home/akatsuki/lets/.data/maps")
         osu_file_path = beatmap_path / f"{beatmap.id}.osu"
+        if not await usecases.performance.check_local_file(
+            osu_file_path,
+            beatmap.id,
+            beatmap.md5,
+        ):
+            await services.database.execute(
+                f"DELETE FROM {score.mode.scores_table} WHERE id = :id",
+                {"id": score.id},
+            )
 
         usecases.performance.calculate_score(score, osu_file_path)
         await services.database.execute(
@@ -61,22 +81,27 @@ async def recalculate_map(beatmap: Beatmap, scores: list[Score]) -> None:
         *[recalculate_score(beatmap, score) for score in scores],
         return_exceptions=True,
     )
+
+    del BEATMAP_SCORES[beatmap]
     logger.info(f"Completed calculating {beatmap.song_name}!")
+    del beatmap
 
 
 async def main() -> int:
     exit_code = 0
 
+    usecases.performance.ensure_oppai()
+
     try:
         await services.connect_services()
 
         scores = await get_scores()
-        sorted_scores = await sort_scores(scores)
+        await sort_scores(scores)
 
         await asyncio.gather(
             *[
                 recalculate_map(beatmap, _scores)
-                for beatmap, _scores in sorted_scores.items()
+                for beatmap, _scores in BEATMAP_SCORES.items()
             ],
             return_exceptions=True,
         )
