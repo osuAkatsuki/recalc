@@ -13,10 +13,11 @@ from models.beatmap import Beatmap
 from models.score import Score
 from objects.path import Path
 
+# dict of {map: [score, score, ...]}
 BEATMAP_SCORES: dict[Beatmap, list[Score]] = {}
 
-# returns a dict of {map: [score, score, ...]}
-async def sort_scores(scores: list[Score]) -> dict[Beatmap, list[Score]]:
+
+async def sort_scores(scores: list[Score]) -> None:
     global BEATMAP_SCORES
 
     # stupid temp shit for memory efficiency
