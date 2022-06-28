@@ -12,7 +12,6 @@ from constants.ranked_status import RankedStatus
 from models.beatmap import Beatmap
 
 MD5_CACHE: dict[str, Beatmap] = {}
-ID_CACHE: dict[int, Beatmap] = {}
 
 
 async def update_beatmap(beatmap: Beatmap) -> Optional[Beatmap]:
@@ -61,7 +60,6 @@ async def update_beatmap(beatmap: Beatmap) -> Optional[Beatmap]:
 
     asyncio.create_task(save(new_beatmap))  # i don't trust mysql for some reason
     MD5_CACHE[new_beatmap.md5] = new_beatmap
-    ID_CACHE[new_beatmap.id] = new_beatmap
 
     return new_beatmap
 
@@ -72,30 +70,11 @@ async def fetch_by_md5(md5: str) -> Optional[Beatmap]:
 
     if beatmap := await md5_from_database(md5):
         MD5_CACHE[md5] = beatmap
-        ID_CACHE[beatmap.id] = beatmap
 
         return beatmap
 
     if beatmap := await md5_from_api(md5):
         MD5_CACHE[md5] = beatmap
-        ID_CACHE[beatmap.id] = beatmap
-
-        return beatmap
-
-
-async def fetch_by_id(id: int) -> Optional[Beatmap]:
-    if beatmap := id_from_cache(id):
-        return beatmap
-
-    if beatmap := await id_from_database(id):
-        MD5_CACHE[beatmap.md5] = beatmap
-        ID_CACHE[beatmap.id] = beatmap
-
-        return beatmap
-
-    if beatmap := await id_from_api(id):
-        MD5_CACHE[beatmap.md5] = beatmap
-        ID_CACHE[beatmap.id] = beatmap
 
         return beatmap
 
@@ -104,27 +83,10 @@ def md5_from_cache(md5: str) -> Optional[Beatmap]:
     return MD5_CACHE.get(md5)
 
 
-def id_from_cache(id: int) -> Optional[Beatmap]:
-    return ID_CACHE.get(id)
-
-
 async def md5_from_database(md5: str) -> Optional[Beatmap]:
     db_result = await services.database.fetch_one(
         "SELECT * FROM beatmaps WHERE beatmap_md5 = :md5",
         {"md5": md5},
-    )
-
-    if not db_result:
-        return None
-
-    bmap = Beatmap.from_dict(db_result)
-    return await update_beatmap(bmap)
-
-
-async def id_from_database(id: int) -> Optional[Beatmap]:
-    db_result = await services.database.fetch_one(
-        "SELECT * FROM beatmaps WHERE beatmap_id = :id",
-        {"id": id},
     )
 
     if not db_result:

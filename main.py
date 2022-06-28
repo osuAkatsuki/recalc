@@ -13,8 +13,8 @@ from models.beatmap import Beatmap
 from models.score import Score
 from objects.path import Path
 
-# returns a dict of {map_md5: [score, score, ...]}
-async def sort_scores(scores: list[Score]) -> dict[str, list[Score]]:
+# returns a dict of {map: [score, score, ...]}
+async def sort_scores(scores: list[Score]) -> dict[Beatmap, list[Score]]:
     result: dict[Beatmap, list[Score]] = defaultdict(list)
 
     for score in scores:
@@ -22,7 +22,7 @@ async def sort_scores(scores: list[Score]) -> dict[str, list[Score]]:
         if not beatmap or not beatmap.has_leaderboard:
             continue
 
-        result[score.map_md5].append(score)
+        result[beatmap].append(score)
 
     logger.info(f"Filtered scores into {len(result.keys()):,} beatmaps!")
     return dict(result)
