@@ -9,6 +9,8 @@ import logger
 import services
 import usecases.beatmap
 import usecases.performance
+import usecases.stats
+from constants.mode import Mode
 from models.beatmap import Beatmap
 from models.score import Score
 from objects.path import Path
@@ -85,6 +87,31 @@ async def recalculate_score(beatmap: Beatmap, score: Score) -> None:
         logger.error(traceback.format_exc())
 
 
+async def recalculate_user(user_id: int, privileges: int) -> None:
+    for mode in Mode:
+        stats = await usecases.stats.fetch(user_id, mode)
+        if not stats:
+            logger.error(f"Failed to retrieve {mode!r} stats for user ID {user_id}")
+            continue
+
+        old_pp = stats.pp
+
+        await usecases.stats.full_recalc(stats)
+        await usecases.stats.save(stats)
+
+        if privileges & 1:  # not restricted
+            await usecases.stats.update_rank(stats)
+
+        # update ingame
+        await usecases.stats.refresh_stats()
+
+        logger.info(
+            f"User ID's {mode!r} stats finished recalculating: {old_pp:.2f}pp -> {stats.pp:.2f}pp",
+        )
+
+    logger.info(f"Finished recalculating stats for user ID {user_id}")
+
+
 async def main() -> int:
     exit_code = 0
 
@@ -96,7 +123,10 @@ async def main() -> int:
         scores = await get_scores()
         await recalculate_scores(scores)
 
-        # TODO: recalculate user pp, ranks
+        logger.info("Finished recalculating scores")
+
+        # TODO: finish
+        # logger.info("Finished recalculating stats")
     except KeyboardInterrupt:
         exit_code = 0
     except:
