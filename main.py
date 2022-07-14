@@ -21,7 +21,7 @@ async def get_scores() -> list[Score]:
 
     for table in ("scores", "scores_relax", "scores_ap"):
         _db_scores = await services.database.fetch_all(
-            f"SELECT * FROM {table} WHERE completed > 1 ORDER BY beatmap_md5",  # get all non-failed scores
+            f"SELECT * FROM {table} WHERE completed > 1 AND play_mode != 0 ORDER BY beatmap_md5",  # get all non-failed scores (temp non-std only to fix converts)
         )
 
         db_scores.extend(Score.from_dict(db_score) for db_score in _db_scores)
@@ -50,7 +50,7 @@ async def recalculate_scores(scores: list[Score]) -> None:
         asyncio.create_task(recalculate_map(beatmap, score_list))
 
     del _scores
-    logger.info(f"Calculated scores for {len(bmap_count):,} beatmaps!")
+    logger.info(f"Calculated scores for {bmap_count:,} beatmaps!")
 
 
 async def recalculate_map(beatmap: Beatmap, scores: list[Score]) -> None:
