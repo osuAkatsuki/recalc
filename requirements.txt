@@ -29,7 +29,7 @@ pycares==4.2.1
 pycparser==2.21
 PyMySQL==1.0.2
 requests==2.28.0
-rosu-pp-py==0.7.1
+rosu-pp-py==0.7.2
 SQLAlchemy==1.4.39
 tomli==2.0.1
 typing_extensions==4.2.0
